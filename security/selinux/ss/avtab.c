@@ -419,6 +419,7 @@ int avtab_read_item(struct avtab *a, void *fp, struct policydb *pol,
 			printk(KERN_ERR "SELinux: avtab: entry has operations\n");
 			return -EINVAL;
 		}
+
 		for (i = 0; i < ARRAY_SIZE(spec_order); i++) {
 			if (val & spec_order[i]) {
 				key.specified = spec_order[i] | enabled;
@@ -441,7 +442,6 @@ int avtab_read_item(struct avtab *a, void *fp, struct policydb *pol,
 		printk(KERN_ERR "SELinux: avtab: truncated entry\n");
 		return rc;
 	}
-
 	items = 0;
 	key.source_type = le16_to_cpu(buf16[items++]);
 	key.target_type = le16_to_cpu(buf16[items++]);
@@ -563,6 +563,9 @@ int avtab_write_item(struct policydb *p, struct avtab_node *cur, void *fp)
 		return rc;
 
 	if (cur->key.specified & AVTAB_OP) {
+		rc = put_entry(&cur->datum.u.ops->type, sizeof(u8), 1, fp);
+		if (rc)
+			return rc;
 		for (i = 0; i < ARRAY_SIZE(cur->datum.u.ops->op.perms); i++)
 			buf32[i] = cpu_to_le32(cur->datum.u.ops->op.perms[i]);
 		rc = put_entry(buf32, sizeof(u32),
