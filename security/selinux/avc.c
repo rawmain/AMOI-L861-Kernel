@@ -197,7 +197,6 @@ void __init avc_init(void)
 				sizeof(struct operation_perm),
 				0, SLAB_PANIC, NULL);
 
-
 	audit_log(current->audit_context, GFP_KERNEL, AUDIT_KERNEL, "AVC INITIALIZED\n");
 }
 
@@ -299,13 +298,15 @@ static void avc_operation_decision_free(
 
 static void avc_operation_free(struct avc_operation_node *ops_node)
 {
-	struct avc_operation_decision_node *od_node;
+	struct avc_operation_decision_node *od_node, *tmp;
 
 	if (!ops_node)
 		return;
 
-	list_for_each_entry(od_node, &ops_node->od_head, od_list)
+	list_for_each_entry_safe(od_node, tmp, &ops_node->od_head, od_list) {
+		list_del(&od_node->od_list);
 		avc_operation_decision_free(od_node);
+	}
 	kmem_cache_free(avc_operation_node_cachep, ops_node);
 }
 
@@ -493,7 +494,7 @@ static inline int avc_operation_audit(u32 ssid, u32 tsid, u16 tclass,
 static void avc_node_free(struct rcu_head *rhead)
 {
 	struct avc_node *node = container_of(rhead, struct avc_node, rhead);
-	avc_operation_free(node->ae.ops_node);	
+	avc_operation_free(node->ae.ops_node);
 	kmem_cache_free(avc_node_cachep, node);
 	avc_cache_stats_incr(frees);
 }
@@ -1146,6 +1147,7 @@ inline int avc_has_perm_noaudit(u32 ssid, u32 tsid,
 	denied = requested & ~(avd->allowed);
 	if (unlikely(denied))
 		rc = avc_denied(ssid, tsid, tclass, requested, 0, flags, avd);
+
 	rcu_read_unlock();
 	return rc;
 }
