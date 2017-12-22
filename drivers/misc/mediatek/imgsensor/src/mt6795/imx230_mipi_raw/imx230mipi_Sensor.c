@@ -58,6 +58,13 @@ static DEFINE_SPINLOCK(imgsensor_drv_lock);
 #define GAIN_RED_ADDR      0x0210
 #define GAIN_GREEN2_ADDR   0x0214
 
+static BYTE imx230_SPC_data[352]={0};
+
+extern void read_imx230_SPC( BYTE* data );
+extern void read_imx230_DCC( kal_uint16 addr,BYTE* data, kal_uint32 size);
+extern void read_imx230_AWB( BYTE* data );
+extern void read_imx230_LSC( BYTE* data );
+
 BYTE mid;
 USHORT  current_rg,current_bg,golden_rg,golden_bg;
 kal_uint32 r_ratio_230;
@@ -384,6 +391,65 @@ static void set_max_framerate(UINT16 framerate,kal_bool min_framelength_en)
 }    /*    set_max_framerate  */
 
 
+static MUINT32 cur_startpos = 0;
+static MUINT32 cur_size = 0;
+
+static void imx230_set_pd_focus_area(MUINT32 startpos, MUINT32 size)
+{
+	UINT16 start_x_pos, start_y_pos, end_x_pos, end_y_pos;
+	UINT16 focus_width, focus_height;
+
+	if((cur_startpos == startpos) && (cur_size == size))
+	{
+		LOG_INF("Not to need update focus area!\n");
+		return;
+	}
+	else
+	{
+		cur_startpos = startpos;
+		cur_size = size;
+	}
+	
+	start_x_pos = (startpos >> 16) & 0xFFFF;
+	start_y_pos = startpos & 0xFFFF;
+	focus_width = (size >> 16) & 0xFFFF;
+	focus_height = size & 0xFFFF;
+
+	end_x_pos = start_x_pos + focus_width;
+	end_y_pos = start_y_pos + focus_height;
+
+	if(imgsensor.pdaf_mode == 1)
+	{
+		LOG_INF("GC pre PDAF\n");
+		/*PDAF*/
+		/*PD_CAL_ENALBE*/
+		write_cmos_sensor(0x3121,0x01);
+		/*AREA MODE*/
+		write_cmos_sensor(0x31B0,0x02);// 8x6 output
+		write_cmos_sensor(0x31B4,0x01);// 8x6 output
+		/*PD_OUT_EN=1*/
+		write_cmos_sensor(0x3123,0x01);
+
+		/*Fixed area mode*/
+		
+		write_cmos_sensor(0x3158,(start_x_pos >> 8) & 0xFF);
+		write_cmos_sensor(0x3159,start_x_pos & 0xFF);// X start
+		write_cmos_sensor(0x315a,(start_y_pos >> 8) & 0xFF);
+		write_cmos_sensor(0x315b,start_y_pos & 0xFF);// Y start
+		write_cmos_sensor(0x315c,(end_x_pos >> 8) & 0xFF);
+		write_cmos_sensor(0x315d,end_x_pos & 0xFF);//X end 
+		write_cmos_sensor(0x315e,(end_y_pos >> 8) & 0xFF);
+		write_cmos_sensor(0x315f,end_y_pos & 0xFF);// Y end
+
+		
+	}
+
+
+	LOG_INF("start_x_pos:%d, start_y_pos:%d, focus_width:%d, focus_height:%d, end_x_pos:%d, end_y_pos:%d\n", \
+			start_x_pos, start_y_pos, focus_width, focus_height, end_x_pos, end_y_pos);
+	
+	return;
+}
 
 /*************************************************************************
 * FUNCTION
@@ -1147,7 +1213,30 @@ write_cmos_sensor(0x3A21,0x00);
 write_cmos_sensor(0x3011,0x00);
 write_cmos_sensor(0x3013,0x01);
 
+	if(imgsensor.pdaf_mode == 1)
+	{
+		LOG_INF("GC pre PDAF\n");
+		/*PDAF*/
+		/*PD_CAL_ENALBE*/
+		write_cmos_sensor(0x3121,0x01);
+		/*AREA MODE*/
+		write_cmos_sensor(0x31B0,0x02);// 8x6 output
+		write_cmos_sensor(0x31B4,0x01);// 8x6 output
+		/*PD_OUT_EN=1*/
+		write_cmos_sensor(0x3123,0x01);
 
+
+		/*Fixed area mode*/
+		write_cmos_sensor(0x3158,0x03);
+		write_cmos_sensor(0x3159,0x22);// X start = 802
+		write_cmos_sensor(0x315a,0x02);
+		write_cmos_sensor(0x315b,0x5B);// Y start= 603
+		write_cmos_sensor(0x315c,0x07);
+		write_cmos_sensor(0x315d,0x4E);//X end = 1870
+		write_cmos_sensor(0x315e,0x05);
+		write_cmos_sensor(0x315f,0x7D);// Y end = 1405
+
+	}
 	write_cmos_sensor(0x0100,0x01);
 }    /*    preview_setting  */
 
@@ -2540,6 +2629,12 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
             *feature_return_para_32=LENS_DRIVER_ID_DO_NOT_CARE;
             *feature_para_len=4;
             break;
+            
+        case SENSOR_FEATURE_GET_PDAF_DATA:
+			LOG_INF("SENSOR_FEATURE_GET_PDAF_DATA\n");
+			read_imx230_DCC((kal_uint16 )(*feature_data),(char*)(uintptr_t)(*(feature_data+1)),(kal_uint32)(*(feature_data+2)));
+            break;
+        
         case SENSOR_FEATURE_SET_VIDEO_MODE:
             set_video_mode(*feature_data_16);
             break;
@@ -2601,6 +2696,15 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
             LOG_INF("SENSOR_SET_SENSOR_IHDR LE=%d, SE=%d, Gain=%d\n",*feature_data,*(feature_data+1),*(feature_data+2));
             ihdr_write_shutter_gain(*feature_data,*(feature_data+1),*(feature_data+2));
             break;
+        //Hier
+        case SENSOR_FEATURE_SET_PDAF:
+			LOG_INF("PDAF mode :%d\n", *feature_data_16);
+			imgsensor.pdaf_mode= *feature_data_16;
+			break;
+        case SENSOR_FEATURE_SET_PDFOCUS_AREA:
+            LOG_INF("SENSOR_FEATURE_SET_IMX230_PDFOCUS_AREA Start Pos=%d, Size=%d\n",(UINT32)*feature_data,(UINT32)*(feature_data+1));
+            imx230_set_pd_focus_area(*feature_data,*(feature_data+1));
+			break;    
         default:
             break;
     }

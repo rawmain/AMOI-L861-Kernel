@@ -16,7 +16,6 @@
 #ifndef _OV5693MIPI_SENSOR_H
 #define _OV5693MIPI_SENSOR_H
 
-
 typedef enum{
     IMGSENSOR_MODE_INIT,
     IMGSENSOR_MODE_PREVIEW,
@@ -68,7 +67,7 @@ typedef struct imgsensor_struct {
     kal_bool test_pattern;            //record test pattern mode or not
     MSDK_SCENARIO_ID_ENUM current_scenario_id;//current scenario id
     kal_uint8  ihdr_en;                //ihdr enable or disable
-
+	kal_uint8  pdaf_mode;				//camera fix     ihdr enable or disable
     kal_uint8 i2c_write_id;            //record current sensor's i2c write id
 } imgsensor_struct;
 
@@ -112,12 +111,13 @@ typedef struct imgsensor_info_struct {
 } imgsensor_info_struct;
 
 /* SENSOR READ/WRITE ID */
-//#define IMGSENSOR_WRITE_ID_1 (0x6c)
-//#define IMGSENSOR_READ_ID_1  (0x6d)
-//#define IMGSENSOR_WRITE_ID_2 (0x20)
-//#define IMGSENSOR_READ_ID_2  (0x21)
+#define IMGSENSOR_WRITE_ID_1 (0x6c)
+#define IMGSENSOR_READ_ID_1  (0x6d)
+#define IMGSENSOR_WRITE_ID_2 (0x20)
+#define IMGSENSOR_READ_ID_2  (0x21)
 
 extern int iReadRegI2C(u8 *a_pSendData , u16 a_sizeSendData, u8 * a_pRecvData, u16 a_sizeRecvData, u16 i2cId);
 extern int iWriteRegI2C(u8 *a_pSendData , u16 a_sizeSendData, u16 i2cId);
+extern void read_imx230_eeprom( void);
 
 #endif
