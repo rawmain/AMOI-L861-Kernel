@@ -488,7 +488,10 @@ config TOUCHSCREEN_MTK_GT9XX_2
 config MTK_GT9157_861
 	bool "GT9157 TPC for AMOI L861"
 	depends on TOUCHSCREEN_MTK
-      
+
+config MTK_GT9157_861_APPSWITCH
+	bool "RIGHT BUTTON APP_SWITCH (for 5.1 Compatibility)"
+	depends on MTK_GT9157_861
         
 # Touch panel
 config MTK_GT9XX
