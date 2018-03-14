@@ -86,7 +86,12 @@
 #define key_3           300,850
 #define key_4           420,850
 
+#ifdef CONFIG_MTK_GT9157_861_APPSWITCH
+#define TPD_KEYS        {KEY_BACK,KEY_HOMEPAGE,KEYCODE_APP_SWITCH, KEY_SEARCH}
+#else
 #define TPD_KEYS        {KEY_BACK,KEY_HOMEPAGE,KEY_MENU, KEY_SEARCH}
+#endif
+
 #define TPD_KEYS_DIM    {{key_1,50,30},{key_2,50,30},{key_3,50,30},{key_4,50,30}}
 
 //***************************PART1:ON/OFF define*******************************
