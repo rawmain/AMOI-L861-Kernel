@@ -208,7 +208,7 @@ static int slp_suspend_ops_prepare(void)
     slp_notice("@@@@@@@@@@@@@@@@@@@@\n");
 
 //FIXME: for FPGA early porting
-#if 1
+#ifdef CONFIG_MTK_POWER_GS
     if (slp_chk_golden)
         mt_power_gs_dump_suspend();
 #endif
