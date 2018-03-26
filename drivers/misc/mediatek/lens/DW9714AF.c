@@ -212,8 +212,8 @@ static int AF_Open(struct inode *a_pstInode, struct file *a_pstFile)
 		LOG_INF("The device is opened\n");
 		return -EBUSY;
 	}
-
-    // i4RetValue = g_pstAF_CurDrv->pAF_Ioctl(a_pstFile, AFIOC_T_MOVETO, 0);  calibrate to 0 position only when needed 
+// calibrate to 0 position only when needed 
+//    i4RetValue = g_pstAF_CurDrv->pAF_Ioctl(a_pstFile, AFIOC_T_MOVETO, 0); 
 
 	spin_lock(&g_AF_SpinLock);
 	g_s4AF_Opened = 1;
